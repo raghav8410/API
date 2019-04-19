@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -100,11 +102,29 @@ namespace RegistrationApi.Controllers
                 return Conflict("Email exists");
             }
 
+            string password = encryption(registeredUser.Password);
+            registeredUser.Password = password;
+
             _context.RegisteredUser.Add(registeredUser);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetRegisteredUser", new { id = registeredUser.ID }, registeredUser);
         }
+
+        public string encryption(String password)
+        {
+            MD5CryptoServiceProvider md5 = new MD5CryptoServiceProvider();
+            byte[] encrypt;
+            UTF8Encoding encode = new UTF8Encoding();
+            encrypt = md5.ComputeHash(encode.GetBytes(password));
+            StringBuilder encryptdata = new StringBuilder();
+            for (int i = 0; i < encrypt.Length; i++)
+            {
+                encryptdata.Append(encrypt[i].ToString());
+            }
+            return encryptdata.ToString();
+        }
+
         // Login: api/v1/user/login
         [HttpPost("user/login")]
         public async Task<IActionResult> PostLoginUser([FromBody] RegisteredUser registeredUser)
@@ -118,8 +138,12 @@ namespace RegistrationApi.Controllers
 
                 if (RegisteredUserExists(registeredUser.Email))
                 {
+
+                    string password = encryption(registeredUser.Password);
+                    //registeredUser.Password = password;
+
                     var user = (from e in _context.RegisteredUser
-                                where e.Email == registeredUser.Email && e.Password == registeredUser.Password
+                                where e.Email == registeredUser.Email && e.Password == password
                                 select e).FirstOrDefault();
 
                     //    if (result != null)
@@ -148,7 +172,7 @@ namespace RegistrationApi.Controllers
                     };
                     var token = tokenHandler.CreateToken(tokenDescriptor);
                     var AuthToken = tokenHandler.WriteToken(token);
-                    return Ok(token);
+                    return Ok(AuthToken);
                 }
                 return Unauthorized();
             }
