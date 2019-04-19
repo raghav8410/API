@@ -1,16 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Registration;
 using RegistrationApi.Models;
 
 namespace RegistrationApi.Controllers
 {
-    [Route("api/")]
+    [Route("api/v1/")]
     [ApiController]
     public class RegisteredUsersController : ControllerBase
     {
@@ -21,15 +25,15 @@ namespace RegistrationApi.Controllers
             _context = context;
         }
 
-        // GET: api/registered
-        [HttpGet("registered")]
+        // GET: api/v1/user/profile
+        [HttpGet("user/profile")]
         public IEnumerable<RegisteredUser> GetRegisteredUser()
         {
             return _context.RegisteredUser.ToList();
         }
 
-        // GET: api/registered/5
-        [HttpGet("registered/{id}")]
+        // GET: api/v1/user/5/profile
+        [HttpGet("user/{id}/profile")]
         public async Task<IActionResult> GetRegisteredUser([FromRoute] int id)
         {
             if (!ModelState.IsValid)
@@ -47,8 +51,8 @@ namespace RegistrationApi.Controllers
             return Ok(registeredUser);
         }
 
-        // PUT: api/RegisteredUsers/5
-        [HttpPut("{id}")]
+        // PUT: api/v1/updateuser/5
+        [HttpPut("updateuser/{id}")]
         public async Task<IActionResult> PutRegisteredUser([FromRoute] int id, [FromBody] RegisteredUser registeredUser)
         {
             if (!ModelState.IsValid)
@@ -82,8 +86,8 @@ namespace RegistrationApi.Controllers
             return NoContent();
         }
 
-        // POST: api/register
-        [HttpPost("register")]
+        // POST: api/v1/user
+        [HttpPost("user")]
         public async Task<IActionResult> PostRegisteredUser([FromBody] RegisteredUser registeredUser)
         {
             if (!ModelState.IsValid)
@@ -101,33 +105,60 @@ namespace RegistrationApi.Controllers
 
             return CreatedAtAction("GetRegisteredUser", new { id = registeredUser.ID }, registeredUser);
         }
-        // Login: api/login
-        [HttpPost("login")]
+        // Login: api/v1/user/login
+        [HttpPost("user/login")]
         public async Task<IActionResult> PostLoginUser([FromBody] RegisteredUser registeredUser)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
-            }
-
-            if (RegisteredUserExists(registeredUser.Email))
-            {
-                var result = (from e in _context.RegisteredUser
-                               where e.Email == registeredUser.Email && e.Password == registeredUser.Password
-                               select e).FirstOrDefault();
-
-                if (result != null)
+                if (!ModelState.IsValid)
                 {
-                    return Ok("login successful");
+                    return BadRequest(ModelState);
                 }
-                else
-                    return Unauthorized();
 
+                if (RegisteredUserExists(registeredUser.Email))
+                {
+                    var user = (from e in _context.RegisteredUser
+                                where e.Email == registeredUser.Email && e.Password == registeredUser.Password
+                                select e).FirstOrDefault();
+
+                    //    if (result != null)
+                    //    {
+                    //        return Ok("login successful");
+                    //    }
+                    //    else
+                    //        return Unauthorized();
+
+                    //}
+                    //return Unauthorized();
+                    if (user == null)
+                        return null;
+
+                    // authentication successful so generate jwt token
+                    var tokenHandler = new JwtSecurityTokenHandler();
+                    var key = Encoding.ASCII.GetBytes("{ 060110A9 - 0948 - 48FA - 9D65 - 180A994BDD46}");
+                    var tokenDescriptor = new SecurityTokenDescriptor
+                    {
+                        Subject = new ClaimsIdentity(new Claim[]
+                        {
+                    new Claim(ClaimTypes.Name, user.ID.ToString())
+                        }),
+                        Expires = DateTime.UtcNow.AddDays(7),
+                        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+                    };
+                    var token = tokenHandler.CreateToken(tokenDescriptor);
+                    var AuthToken = tokenHandler.WriteToken(token);
+                    return Ok(token);
+                }
+                return Unauthorized();
             }
-            return Unauthorized();
-        }
+            catch(Exception e)
+            {
+                return NotFound(e.Message);
+            }
+            }
 
-        // DELETE: api/delete/5
+        // DELETE: api/v1/delete/5
         [HttpDelete("delete/{id}")]
         public async Task<IActionResult> DeleteRegisteredUser([FromRoute] int id)
         {
@@ -139,7 +170,7 @@ namespace RegistrationApi.Controllers
             var registeredUser = await _context.RegisteredUser.FindAsync(id);
             if (registeredUser == null)
             {
-                return NotFound();
+                return NotFound("Id doesn't exists.");
             }
 
             _context.RegisteredUser.Remove(registeredUser);
