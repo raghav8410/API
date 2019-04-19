@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -35,6 +36,7 @@ namespace RegistrationApi.Controllers
         }
 
         // GET: api/v1/user/5/profile
+        [Authorize]
         [HttpGet("user/{id}/profile")]
         public async Task<IActionResult> GetRegisteredUser([FromRoute] int id)
         {
@@ -172,6 +174,7 @@ namespace RegistrationApi.Controllers
                     };
                     var token = tokenHandler.CreateToken(tokenDescriptor);
                     var AuthToken = tokenHandler.WriteToken(token);
+                    SendEmail("Testing the initial mail...");
                     return Ok(AuthToken);
                 }
                 return Unauthorized();
@@ -211,6 +214,22 @@ namespace RegistrationApi.Controllers
         private bool RegisteredUserExists(string email)
         {
             return _context.RegisteredUser.Any(e => e.Email == email);
+        }
+
+        public void SendEmail(string emailbody)
+        {
+            MailMessage mailMessage = new MailMessage("raghav.15bcs2078@abes.ac.in", "nareshnirala79@gmail.com");
+            mailMessage.Body = emailbody;
+            mailMessage.Subject = "Exception";
+
+            SmtpClient smtpClient = new SmtpClient("smtp.gmail.com", 587);
+            smtpClient.Credentials = new System.Net.NetworkCredential()
+            {
+                UserName = "raghav.15bcs2078@abes.ac.in",
+                Password = "craterzone@1234"
+            };
+            smtpClient.EnableSsl = true;
+            smtpClient.Send(mailMessage);
         }
     }
 }
