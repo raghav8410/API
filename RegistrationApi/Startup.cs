@@ -16,6 +16,7 @@ using System.Text;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using RegistrationApi.Helper;
+using RegistrationApi.Controllers;
 
 namespace RegistrationApi
 {
@@ -57,7 +58,7 @@ namespace RegistrationApi
             });
 
             // configure DI for application services
-            //services.AddScoped<IUserService, UserService>();
+            //services.AddScoped<RegisteredUsersController>();
 
         }
 

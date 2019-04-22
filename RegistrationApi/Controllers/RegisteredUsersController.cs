@@ -17,6 +17,7 @@ using RegistrationApi.Models;
 
 namespace RegistrationApi.Controllers
 {
+    [Authorize]
     [Route("api/v1/")]
     [ApiController]
     public class RegisteredUsersController : ControllerBase
@@ -30,7 +31,6 @@ namespace RegistrationApi.Controllers
 
         // GET: api/v1/user/profile
         [HttpGet("user/profile")]
-        [Authorize]
         public IEnumerable<RegisteredUser> GetRegisteredUser()
         {
             return _context.RegisteredUser.ToList();
@@ -135,6 +135,7 @@ namespace RegistrationApi.Controllers
         }
 
         // Login: api/v1/user/login
+        [AllowAnonymous]
         [HttpPost("user/login")]
         public async Task<IActionResult> PostLoginUser([FromBody] RegisteredUser registeredUser)
         {
@@ -182,6 +183,7 @@ namespace RegistrationApi.Controllers
                     var token = tokenHandler.CreateToken(tokenDescriptor);
                     var AuthToken = tokenHandler.WriteToken(token);
                     int otpvalue = OTP();
+
                     SendEmail("Testing the initial mail..."+otpvalue);
                     return Ok(AuthToken);
                 }
@@ -243,8 +245,7 @@ namespace RegistrationApi.Controllers
         public int OTP()
         {
             Random random = new Random();
-            int otp = random.Next(100000, 999999);
-            return otp;
+            return random.Next(100000, 999999);
         }
     }
 }
