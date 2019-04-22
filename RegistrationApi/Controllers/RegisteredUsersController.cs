@@ -30,29 +30,36 @@ namespace RegistrationApi.Controllers
 
         // GET: api/v1/user/profile
         [HttpGet("user/profile")]
+        [Authorize]
         public IEnumerable<RegisteredUser> GetRegisteredUser()
         {
             return _context.RegisteredUser.ToList();
         }
 
         // GET: api/v1/user/5/profile
-        [Authorize]
         [HttpGet("user/{id}/profile")]
         public async Task<IActionResult> GetRegisteredUser([FromRoute] int id)
         {
-            if (!ModelState.IsValid)
+            try
             {
-                return BadRequest(ModelState);
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                var registeredUser = await _context.RegisteredUser.FindAsync(id);
+
+                if (registeredUser == null)
+                {
+                    return NotFound();
+                }
+
+                return Ok(registeredUser);
             }
-
-            var registeredUser = await _context.RegisteredUser.FindAsync(id);
-
-            if (registeredUser == null)
+            catch(Exception e)
             {
-                return NotFound();
+                return NotFound(e.Message);
             }
-
-            return Ok(registeredUser);
         }
 
         // PUT: api/v1/updateuser/5
@@ -174,7 +181,8 @@ namespace RegistrationApi.Controllers
                     };
                     var token = tokenHandler.CreateToken(tokenDescriptor);
                     var AuthToken = tokenHandler.WriteToken(token);
-                    SendEmail("Testing the initial mail...");
+                    int otpvalue = OTP();
+                    SendEmail("Testing the initial mail..."+otpvalue);
                     return Ok(AuthToken);
                 }
                 return Unauthorized();
@@ -218,7 +226,7 @@ namespace RegistrationApi.Controllers
 
         public void SendEmail(string emailbody)
         {
-            MailMessage mailMessage = new MailMessage("raghav.15bcs2078@abes.ac.in", "nareshnirala79@gmail.com");
+            MailMessage mailMessage = new MailMessage("raghav.15bcs2078@abes.ac.in", "raghavgarg8410@gmail.com");
             mailMessage.Body = emailbody;
             mailMessage.Subject = "Exception";
 
@@ -230,6 +238,13 @@ namespace RegistrationApi.Controllers
             };
             smtpClient.EnableSsl = true;
             smtpClient.Send(mailMessage);
+        }
+
+        public int OTP()
+        {
+            Random random = new Random();
+            int otp = random.Next(100000, 999999);
+            return otp;
         }
     }
 }
